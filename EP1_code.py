@@ -1,6 +1,8 @@
-#Autores: Felipe Augusto Pascutti - nUSP: 
-#         Lucas Fiori Rodrigues Amorim de Oliveira - nUSP: 10770408
-#         Turma 
+# MAP3121 - Métodos Numéricos e Aplicações - Turma 04
+# Exercicio Programa 1
+
+# Autores: Felipe Augusto Martins Pascutti - nUSP: 10705551
+#          Lucas Fiori Rodrigues Amorim de Oliveira - nUSP: 10770408
 
 import sys
 import time
@@ -14,67 +16,97 @@ from matplotlib.colors import BoundaryNorm
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-def f1(t, x):
+def f_1(t, x):
+	# Primeira função f pedida no enunciado, aquela que não é necessário colocar no relatório.
 	return ((10*x**2)*(x - 1)) - 60*x*t + 20*t
 
-def f2(t, x):
+def f_2(t, x):
+	# Segunda função f pedida no enunciado, necessário colocar no relatório.
 	return ((10*np.cos(10*t))*(x**2)*(1 - x)**2) - ((1 + np.sin(10*t))*(12*(x**2) - 12*(x) + 2))
 
-def f_exata(t, x):
-	return (1 + np.sin(10*t))*(x**2)*((1 - x)**2)
-
-def f_exata_2(t, x):
+def u_exata_1(t, x):
+	# Solução exata relativa à função f_1.
 	return 10*(t)*(x**2)*(x - 1)
 
+def u_exata_2(t, x):
+	# Solução exata relativa à função f_2.
+	return (1 + np.sin(10*t))*(x**2)*((1 - x)**2)
+
 def function_matrix(xv, tv, func):
+	'''
+	Essa função vai pegar uma das funções definidas acima e permitir que calculemos a matriz
+	solução de forma simples, via numpy sem precisar iterar "manualmente". Fazer por esse método
+	fornece um tempo de execução bem mais rápido, conforme fiz o teste.
+
+	Ela recebe como parâmetro um array x e um array t, devolvendo uma matriz f de tamanho N x M,
+	em que temos o valor de f calculado para cada par ordenado (x, t).
+	'''
 	x_1, t_1 = np.meshgrid(tv, xv)
 
 	if func == 1:
-		return f1(x_1, t_1)
+		return f_1(x_1, t_1)
 
 	elif func == 2:
-		return f2(x_1, t_1)
+		return f_2(x_1, t_1)
 
 	elif func == 3:
-		return f_exata(x_1, t_1)
+		return f_exata_1(x_1, t_1)
 
 	elif func == 4:
 		return f_exata_2(x_1, t_1)
 
-def primeira_tarefa(N, M, func): 
+def calcula_erro():
+	return 
+
+def primeira_tarefa(N, M, func):
+
+	'''
+	Essa função corresponde, de fácil inferência, à geração de gráficos da primeira tarefa do EP.
+	A ideia é, fornecido um valor de N e um valor de M (a depender do valor de lambda), além da 
+	função f, calcular a matriz f, a matriz u por meio da equação (11) e a matriz u_exata. Com as
+	matrizes, plotar dois heatmaps, uma para a matriz u e uma para u_exata na mesma janela. Assim,
+	podemos comparar visualmente os valores obtidos.
+	'''
 
 	T = 1
 	dt, dx = T/M, 1/N
 
+	# O cálculo de lambda é meramente para mostrar no gráfico, pois
+	# evidentemente já sabíamos lambda antes de rodarmos a função, aifnal
+	# usamos para calcular o valor de M.
 	lamb = round((dt/dx**2), 2)
 
-	u = np.zeros((N + 1, M + 1))
-	x = np.arange(N + 1)*dx  #cria o array de pontos da barra
-	t = np.arange(M + 1)*dt  #cria o array de tempo
+	u = np.zeros((N + 1, M + 1)) # Cria a matriz u inicialmente apenas contendo zeros.
+	x = np.arange(N + 1)*dx  # Cria o array de pontos da barra.
+	t = np.arange(M + 1)*dt  # Cria o array de tempo.
 
 	start_time = time.time()
 
 	f = function_matrix(x, t, func)
 
-	if func == 1:
-		u_exata = function_matrix(x, t, 4)
-
-	if func == 2:
-		u[:, 0] = (x**2)*(1 - x)**2
-		u_exata = function_matrix(x, t, 3)
-
+	# Aqui, iteramos "manualmente", pois cada valor de u depende de valores anteriores de u.
 	for i in range(1, x.shape[0] - 1):
 		for j in range(1, t.shape[0]):
 			u[i, j] = u[i, j-1] + (dt*(((u[i-1, j-1] - 2*u[i, j-1] + u[i+1, j-1])/(dx)**2) + f[i, j]))
 
-	elapsed_time = time.time() - start_time
+	elapsed_time = time.time() - start_time # Cálculo simples de tempo de execução.
+
+	if func == 1:
+		u_exata = function_matrix(x, t, 4)
+
+	if func == 2:
+		u[:, 0] = (x**2)*(1 - x)**2 # Condições iniciais de u para f_2, conforme enunciado.
+		u_exata = function_matrix(x, t, 3)
+
+	# Daqui pra cima a etapa operacional está completa. O código que segue tem como objetivo
+	# plotar os valores em heatmaps.
 
 	levels1 = MaxNLocator(nbins=N).tick_values(u.min(), u.max())
 
 	# pick the desired colormap, sensible levels, and define a normalization
 	# instance which takes data values and translates those into levels.
 	cmap = plt.get_cmap('jet')
-	#norm = BoundaryNorm(levels, ncolors=cmap.N, clip=True)
+	norm = BoundaryNorm(levels, ncolors=cmap.N, clip=True)
 
 	fig, (ax0, ax1) = plt.subplots(nrows=2)
 
@@ -88,6 +120,7 @@ def primeira_tarefa(N, M, func):
 					  u,
 					  levels=levels1,
                   	  cmap=cmap)
+
 	fig.colorbar(cf1, ax=ax0)
 	ax0.set_title('Evolução da distribuição da temperatura na barra\n T=1, N={}, λ = {}, Tempo de execução: {:.7f} segundos'.format(N, lamb, elapsed_time))
 
@@ -98,6 +131,7 @@ def primeira_tarefa(N, M, func):
 					   u_exata,
 					   levels=levels2,
 					   cmap=cmap)
+	
 	fig.colorbar(cf2, ax=ax1)
 	ax1.set_title('Solução exata')
 
