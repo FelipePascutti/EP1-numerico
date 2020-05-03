@@ -32,31 +32,27 @@ def u_exata_2(t, x):
 	# Solução exata relativa à função f_2.
 	return (1 + np.sin(10*t))*(x**2)*((1 - x)**2)
 
-def function_matrix(xv, tv, func):
+def function_matrix(tv, xv, func):
 	'''
 	Essa função vai pegar uma das funções definidas acima e permitir que calculemos a matriz
 	solução de forma simples, via numpy sem precisar iterar "manualmente". Fazer por esse método
 	fornece um tempo de execução bem mais rápido, conforme fiz o teste.
-
 	Ela recebe como parâmetro um array x e um array t, devolvendo uma matriz f de tamanho N x M,
 	em que temos o valor de f calculado para cada par ordenado (x, t).
 	'''
-	x_1, t_1 = np.meshgrid(tv, xv)
+	t_1, x_1 = np.meshgrid(tv, xv)
 
 	if func == 1:
-		return f_1(x_1, t_1)
+		return f_1(t_1, x_1)
 
 	elif func == 2:
-		return f_2(x_1, t_1)
+		return f_2(t_1, x_1)
 
 	elif func == 3:
-		return f_exata_1(x_1, t_1)
+		return u_exata_1(t_1, x_1)
 
 	elif func == 4:
-		return f_exata_2(x_1, t_1)
-
-def calcula_erro():
-	return 
+		return u_exata_2(t_1, x_1)
 
 def primeira_tarefa(N, M, func):
 
@@ -80,9 +76,16 @@ def primeira_tarefa(N, M, func):
 	x = np.arange(N + 1)*dx  # Cria o array de pontos da barra.
 	t = np.arange(M + 1)*dt  # Cria o array de tempo.
 
-	start_time = time.time()
+	if func == 1:
+		u_exata = function_matrix(t, x, 3)
 
-	f = function_matrix(x, t, func)
+	if func == 2:
+		u[:, 0] = (x**2)*(1 - x)**2 # Condições iniciais de u para f_2, conforme enunciado.
+		u_exata = function_matrix(t, x, 4)
+
+	f = function_matrix(t, x, func)
+
+	start_time = time.time()
 
 	# Aqui, iteramos "manualmente", pois cada valor de u depende de valores anteriores de u.
 	for i in range(1, x.shape[0] - 1):
@@ -90,13 +93,6 @@ def primeira_tarefa(N, M, func):
 			u[i, j] = u[i, j-1] + (dt*(((u[i-1, j-1] - 2*u[i, j-1] + u[i+1, j-1])/(dx)**2) + f[i, j]))
 
 	elapsed_time = time.time() - start_time # Cálculo simples de tempo de execução.
-
-	if func == 1:
-		u_exata = function_matrix(x, t, 4)
-
-	if func == 2:
-		u[:, 0] = (x**2)*(1 - x)**2 # Condições iniciais de u para f_2, conforme enunciado.
-		u_exata = function_matrix(x, t, 3)
 
 	# Daqui pra cima a etapa operacional está completa. O código que segue tem como objetivo
 	# plotar os valores em heatmaps.
@@ -106,34 +102,46 @@ def primeira_tarefa(N, M, func):
 	# pick the desired colormap, sensible levels, and define a normalization
 	# instance which takes data values and translates those into levels.
 	cmap = plt.get_cmap('jet')
-	norm = BoundaryNorm(levels, ncolors=cmap.N, clip=True)
 
 	fig, (ax0, ax1) = plt.subplots(nrows=2)
 
 	# contours are *point* based plots, so convert our bound into point
 	# centers
 
-	x_1, t_1 = np.meshgrid(t, x)
+	t_1, x_1 = np.meshgrid(t, x)
 
-	cf1 = ax0.contourf(x_1,
-					  t_1,	
+	cf1 = ax0.contourf(t_1,
+					  x_1,	
 					  u,
 					  levels=levels1,
                   	  cmap=cmap)
 
 	fig.colorbar(cf1, ax=ax0)
-	ax0.set_title('Evolução da distribuição da temperatura na barra\n T=1, N={}, λ = {}, Tempo de execução: {:.7f} segundos'.format(N, lamb, elapsed_time))
+	ax0.set_title('Evolução da distribuição da temperatura na barra\n T=1, N={}, λ = {}, Tempo de execução: {:.5f} segundos'.format(N, lamb, elapsed_time))
 
 	levels2 = MaxNLocator(nbins=N).tick_values(u_exata.min(), u_exata.max())
 
-	cf2 = ax1.contourf(x_1,
-					   t_1,
+	cf2 = ax1.contourf(t_1,
+					   x_1,
 					   u_exata,
 					   levels=levels2,
 					   cmap=cmap)
 	
 	fig.colorbar(cf2, ax=ax1)
 	ax1.set_title('Solução exata')
+
+	fig2, ax2 = plt.subplots(nrows=1)
+
+	barra_final = u[:, -1]
+	barra_final_exata = u_exata[:, -1]
+
+	ax2.plot(x, barra_final, 'r', ls='--', label='Solução numérica')
+	ax2.plot(x, barra_final_exata, 'k', lw=4, label='Solução exata')
+	ax2.grid()
+	ax2.set_xlabel('Posição na barra', fontsize=12)
+	ax2.set_ylabel('Temperatura', fontsize=12)
+	ax2.set_title('Em T=1:', fontsize=14)
+	ax2.legend()
 
 	# adjust spacing between subplots so `ax1` title and `ax0` tick labels
 	# don't overlap
