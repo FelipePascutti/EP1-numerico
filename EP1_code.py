@@ -88,9 +88,9 @@ def primeira_tarefa(N, M, func):
 	start_time = time.time()
 
 	# Aqui, iteramos "manualmente", pois cada valor de u depende de valores anteriores de u.
-	for i in range(1, x.shape[0] - 1):
-		for j in range(1, t.shape[0]):
-			u[i, j] = u[i, j-1] + (dt*(((u[i-1, j-1] - 2*u[i, j-1] + u[i+1, j-1])/(dx)**2) + f[i, j]))
+	for j in range(1, t.shape[0]):
+		for i in range(1, x.shape[0] - 1):
+			u[i, j] = u[i, j-1] + dt*(((u[i-1, j-1] - 2*u[i, j-1] + u[i+1, j-1])/(dx**2)) + f[i, j-1])
 
 	elapsed_time = time.time() - start_time # Cálculo simples de tempo de execução.
 
@@ -135,8 +135,8 @@ def primeira_tarefa(N, M, func):
 	barra_final = u[:, -1]
 	barra_final_exata = u_exata[:, -1]
 
-	ax2.plot(x, barra_final, 'r', ls='--', label='Solução numérica')
 	ax2.plot(x, barra_final_exata, 'k', lw=4, label='Solução exata')
+	ax2.plot(x, barra_final, 'r', ls='--', lw=3, label='Solução numérica')
 	ax2.grid()
 	ax2.set_xlabel('Posição na barra', fontsize=12)
 	ax2.set_ylabel('Temperatura', fontsize=12)
@@ -148,7 +148,6 @@ def primeira_tarefa(N, M, func):
 	fig.tight_layout()
 
 	plt.show()
-
 
 def main():
 
