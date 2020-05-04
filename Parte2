@@ -1,0 +1,100 @@
+import numpy as np
+
+def Criadiagonal(A):
+    '''
+    Essa função recebe uma matriz A tridiagonal simétrica e retorna o vetor D
+    (diagonal principal) e S (subdiagonal)
+    '''
+    D, S = [], []
+    for i in range (len(A)): #cria os vetores D e S
+        if i>0:
+            S.append(A[i][i-1])
+        D.append(A[i][i])
+
+    return D, S
+
+def Decomposicao(Diag,Sub):
+    '''
+    Esta funçaõ recebe como entrada a diagonal e as subdiagonais idênticas
+    de uma matriz tridiagonal simétrica A de tamanho n, e fatora ela em
+    A=LDL^t, onde Diag é um vetor que representa uma matriz diagonal, e Sub é
+    um vetor que representa uma matriz com diagonal principal com valores
+    iguais a 1 e uma subdiagonal.
+    '''
+    Diagori=Diag[:] # Cria uma cópia dos vetores
+    Subori=Sub[:]   # da diagonal e da subdiagonal
+    for i in range (0,len(Diag)): #calcula os valores dos vetores D e L usados na decomposição
+        if i == 0:
+            Diag[i] = Diagori [i]
+            Sub[i] = Subori[i]/Diag[i]
+        elif i < len(Diag)-1:
+            Diag[i] = Diagori[i] - Diag[i-1]*(Sub[i-1]**2)
+            Sub[i] = Subori[i]/Diag[i]
+        else:
+            Diag[i] = Diagori[i] - Diag[i-1]*(Sub[i-1]**2)
+
+    return Diag, Sub
+
+def Resolve_Sistema_Parte1(D,L):
+    '''
+    Um sistema A*x=B por ser resolvido multiplicando ambos lados por A^-1,
+    assim: x=(A^-1)*B
+    Como A = LDL^t, teremos, x = ((L^t)^-1)*(D^-1)*(L^-1)*B
+    Como L,D são constantes no tempo, essa função pode ser dividida em duas
+    partes: a parte atemporal e a parte temporal, evitando interações repetidas.
+    '''
+
+    tam=len(D)
+    matrixL=np.identity((tam),dtype=np.float64)
+    matrixD=np.identity((tam),dtype=np.float64)
+    for i in range (tam):
+        if i>0: #                         # altera as matrizes identidades criadas acima
+            matrixL[i][i-1] = L[i-1]      # para serem matrizes correspondentes a D e L
+        matrixD[i][i] = D[i]              # descritas no enunciado
+    Ltrans = np.transpose(matrixL)        # Calculo das matrizes necessárias para calcular X
+    Ltransinv = np.linalg.inv(Ltrans)
+    Linv = np.linalg.inv(matrixL)
+    Dinv = np.linalg.inv(matrixD)
+    mult1 = np.dot(Ltransinv, Dinv)       # Multiplicações de matrizes
+    mult2 = np.dot(mult1, Linv)
+    respparcial = mult2
+    return respparcial
+
+def Resolve_Sistema_Parte2(Parcial,B):
+    '''
+    Funçao que contabiliza a parte temporal para a resolução do Sistema
+    "Parcial" deve ser a resposta parcial gerada pela funçao Resolve_Sistema_Parte1
+    '''
+
+    resp = np.dot(Parcial, B)            # Multiplicação de matrizes
+    return resp
+
+def SistemaLinear(A,B,N,M):
+    '''
+    Essa função recebe como entrada a matriz A e a matriz B onde Ax=B, e retorna x.
+    Para tal, decompoe a matriz A, tridiagonal simétrica, na forma LDL^t para agilizar
+    os cálculos.
+    '''
+
+    U=np.zeros(N+1,M+1)
+    Diagonais = Criadiagonal(A)
+    Decomp = Decomposicao(Diagonais[0],Diagonais[1])
+    Respparcial = Resolve_Sistema_Parte1(Decomp[0],Decomp[1])
+    for i in range(M+1):
+        Resposta = Resolve_Sistema_Parte2(Respparcial,B)
+        U[:,i]=Resposta
+    return U
+
+def Segunda_Parte
+
+def main():
+   A = [[1,0,0],
+        [0,0,1],
+        [0,1,2]]
+   B = [3,2,0]
+   dacertopf = SistemaLinear(A,B,0,0)
+   print(dacertopf)
+
+
+
+main()
