@@ -1,0 +1,185 @@
+import sys
+import time
+import datetime
+import os
+import math
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.colors import BoundaryNorm
+from matplotlib.ticker import MaxNLocator
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+def Criadiagonal(A):
+    '''
+    Essa função recebe uma matriz A tridiagonal simétrica e retorna o vetor D
+    (diagonal principal) e S (subdiagonal)
+    '''
+    D, S = [], []
+    for i in range (len(A)): #cria os vetores D e S
+        if i>0:
+            S.append(A[i][i-1])
+        D.append(A[i][i])
+
+    return D, S
+
+def Decomposicao(Diag,Sub):
+    '''
+    Esta funçaõ recebe como entrada a diagonal e as subdiagonais idênticas
+    de uma matriz tridiagonal simétrica A de tamanho n, e fatora ela em
+    A=LDL^t, onde Diag é um vetor que representa uma matriz diagonal, e Sub é
+    um vetor que representa uma matriz com diagonal principal com valores
+    iguais a 1 e uma subdiagonal.
+    '''
+    Diagori=Diag[:] # Cria uma cópia dos vetores
+    Subori=Sub[:]   # da diagonal e da subdiagonal
+    for i in range (0,len(Diag)): #calcula os valores dos vetores D e L usados na decomposição
+        if i == 0:
+            Diag[i] = Diagori [i]
+            Sub[i] = Subori[i]/Diag[i]
+        elif i < len(Diag)-1:
+            Diag[i] = Diagori[i] - Diag[i-1]*(Sub[i-1]**2)
+            Sub[i] = Subori[i]/Diag[i]
+        else:
+            Diag[i] = Diagori[i] - Diag[i-1]*(Sub[i-1]**2)
+
+    return Diag, Sub
+
+def Resolve_Sistema_Parte1(D,L):
+    '''
+    Um sistema A*x=B por ser resolvido multiplicando ambos lados por A^-1,
+    assim: x=(A^-1)*B
+    Como A = LDL^t, teremos, x = ((L^t)^-1)*(D^-1)*(L^-1)*B
+    Como L,D são constantes no tempo, essa função pode ser dividida em duas
+    partes: a parte atemporal e a parte temporal, evitando interações repetidas.
+    '''
+
+    tam=len(D)
+    matrixL=np.identity((tam),dtype=np.float64)
+    matrixD=np.identity((tam),dtype=np.float64)
+    for i in range (tam):
+        if i>0: #                         # altera as matrizes identidades criadas acima
+            matrixL[i][i-1] = L[i-1]      # para serem matrizes correspondentes a D e L
+        matrixD[i][i] = D[i]              # descritas no enunciado
+    Ltrans = np.transpose(matrixL)        # Calculo das matrizes necessárias para calcular X
+    Ltransinv = np.linalg.inv(Ltrans)
+    Linv = np.linalg.inv(matrixL)
+    Dinv = np.linalg.inv(matrixD)
+    mult1 = np.dot(Ltransinv, Dinv)       # Multiplicações de matrizes
+    mult2 = np.dot(mult1, Linv)
+    respparcial = mult2
+    return respparcial
+
+def Resolve_Sistema_Parte2(Parcial,B):
+    '''
+    Funçao que contabiliza a parte temporal para a resolução do Sistema
+    "Parcial" deve ser a resposta parcial gerada pela funçao Resolve_Sistema_Parte1
+    '''
+
+    resp = np.dot(Parcial, B)            # Multiplicação de matrizes
+    return resp
+
+def CriaA(lamb,N,M,metodo):
+    '''
+    Função que, dado lambda, cria a matriz A a ser utilizada
+    '''
+
+    A = np.zeros((N+1,M+1))
+    if metodo == 0:
+        for i in range(len(A)):
+            if i>0:
+                A[i][i-1] = -lamb
+            A[i][i] = 1 + 2*lamb
+            if i <len(A) and i>0:
+                A[i-1][i] = -lamb
+
+    return A
+def SistemaLinear(A,B,N,M,lamb,f,metodo):
+    '''
+    Essa função recebe como entrada a matriz A e a matriz B onde Ax=B, e retorna x.
+    Para tal, decompoe a matriz A, tridiagonal simétrica, na forma LDL^t para agilizar
+    os cálculos.
+    '''
+    if metodo == 0:
+        U=np.zeros((N+1,M+1))
+        Diagonais = Criadiagonal(A)
+        Decomp = Decomposicao(Diagonais[0],Diagonais[1])
+        Respparcial = Resolve_Sistema_Parte1(Decomp[0],Decomp[1]) #decompõe A
+        for i in range(M+1):
+            Resposta = Resolve_Sistema_Parte2(Respparcial,B) #Primeira interação com B sendo as condições iniciais
+            U[:,i] = Resposta #Atualiza a resposta
+            if i>1 and i!= M:
+                for j in range (len(B)-1):
+                    B[j] = U[j,i] + f[j,i+1]/M   #Atualiza o vetor B
+
+    return U
+
+def f_1(t, x):
+
+	# Primeira função f pedida no enunciado, aquela que não é necessário colocar no relatório.
+	return ((10*x**2)*(x - 1)) - 60*x*t + 20*t
+
+def f_2(t, x):
+
+	# Segunda função f pedida no enunciado, necessário colocar no relatório.
+	return ((10*np.cos(10*t))*(x**2)*(1 - x)**2) - ((1 + np.sin(10*t))*(12*(x**2) - 12*(x) + 2))
+
+def function_matrix(tv, xv, func):
+	'''
+	Essa função vai pegar uma das funções definidas acima e permitir que calculemos a matriz
+	solução de forma simples, via numpy sem precisar iterar "manualmente". Fazer por esse método
+	fornece um tempo de execução bem mais rápido, conforme fiz o teste.
+	Ela recebe como parâmetro um array x e um array t, devolvendo uma matriz f de tamanho N x M,
+	em que temos o valor de f calculado para cada par ordenado (x, t).
+	'''
+
+	t_1, x_1 = np.meshgrid(tv, xv)
+
+	if func == 1:
+		return f_1(t_1, x_1)
+
+	elif func == 2:
+		return f_2(t_1, x_1)
+
+def Segunda_Parte(N,M,func,metodo):
+    '''
+    Está função corresponde à geração de gráficos da segunda tarefa do EP.
+    Dados valores de N,M e a função de transferência de calor f, calcula-se
+    a matriz U por meio da equação (28) (para o método de Euler implícito),
+    ou pela equação (35) (para o método de Crank-Nicolson).
+    '''
+
+    dt, dx = 1/M, 1/N
+    lamb = round((dt/dx**2),2)
+    x = np.arange(N + 1) * dx  # Cria o array de pontos da barra.
+    t = np.arange(M + 1) * dt  # Cria o array de tempo.
+    if metodo == 0:                # Método de Euler implicito
+        if func == 1:
+            f = function_matrix(t, x, func)    #Cria uma matriz com os valores de (f,t)
+            A = CriaA(lamb,N,M,metodo)         #Cria matriz A
+            B = [0]*(N+1)            #condição inicial nula
+            resp = SistemaLinear(A,B,N,M,lamb,f,metodo) #Resolve
+        if func == 2:
+            f = function_matrix(t, x, func)
+            A = CriaA(lamb,N,M,metodo)
+            B = np.arange(N+1)*dx           #condição inicial
+            for i in range (len(B)):
+                B[i]=(B[i]**2)*((1-B[i])**2)
+            resp = SistemaLinear(A,B,N,M,lamb,f,metodo)
+        #plotagem
+        levels1 = MaxNLocator(nbins=N).tick_values(resp.min(), resp.max())
+        cmap = plt.get_cmap('jet')
+        fig, (ax0, ax1) = plt.subplots(nrows=2)
+        t_1, x_1 = np.meshgrid(t, x)
+        cf1 = ax0.contourf(t_1,
+                           x_1,
+                           resp,
+                           levels=levels1,
+                           cmap=cmap)
+        fig.colorbar(cf1, ax=ax0)
+        plt.show()
+
+def main():
+    Segunda_Parte(40,3200,2,0)
+
+main()
